@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strongman Pro: Elite</title>
+    <style>
+        body { background: #0b0b0b; color: #eee; font-family: 'Impact', sans-serif; text-align: center; margin: 0; padding: 10px; }
+        .app-container { max-width: 500px; margin: 0 auto; border: 4px solid #cc0000; background: #151515; padding: 15px; box-shadow: 0 0 20px rgba(204,0,0,0.5); border-radius: 10px; position: relative; }
+        h1 { color: #ff0000; font-size: 2.5rem; margin: 10px 0; text-shadow: 2px 2px #000; }
+        
+        .tabs { display: flex; justify-content: space-around; margin-bottom: 20px; border-bottom: 2px solid #333; overflow-x: auto; }
+        .tab-btn { background: none; border: none; color: #888; padding: 12px; cursor: pointer; font-family: 'Impact'; font-size: 1rem; white-space: nowrap; }
+        .tab-btn.active { color: #ff0000; border-bottom: 3px solid #ff0000; }
+        .tab-content { display: none; text-align: left; }
+        .tab-content.active { display: block; }
+
+        /* Planner Styles */
+        .day-card { background: #222; margin: 10px 0; padding: 12px; border-radius: 5px; border-left: 5px solid #444; }
+        .day-card.active-day { border-left-color: #ff0000; background: #2a1010; }
+        .day-title { color: #ff0000; font-size: 1.2rem; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
+        .plan-input-group { display: flex; gap: 5px; margin-top: 5px; }
+        .start-plan-btn { background: #008800; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-family: 'Impact'; font-size: 0.8rem; }
+
+        /* Timer & Stats */
+        .timer-box { background: #222; border: 2px solid #444; padding: 10px; margin-bottom: 15px; border-radius: 5px; display: flex; align-items: center; justify-content: space-around; }
+        #timerDisplay { font-size: 2rem; color: #ff0000; }
+        .timer-btn { background: #444; color: white; border: none; padding: 8px 15px; cursor: pointer; font-family: 'Impact'; border-radius: 3px; text-transform: uppercase; }
+
+        .stat-badge { color: gold; font-size: 1.1rem; text-align: center; margin-bottom: 15px; display: block; }
+
+        input, select { width: 95%; padding: 12px; margin: 5px 0; background: #222; border: 1px solid #444; color: white; font-family: sans-serif; font-size: 1rem; border-radius: 5px; }
+        .input-row { display: flex; gap: 5px; margin-bottom: 10px; }
+        .small-input { width: 30%; text-align: center; }
+        
+        button.main-btn { width: 100%; padding: 15px; background: #cc0000; color: white; border: none; font-family: 'Impact'; font-size: 1.2rem; cursor: pointer; margin-top: 10px; text-transform: uppercase; border-radius: 5px; }
+        
+        li { background: #1a1a1a; margin: 10px 0; padding: 15px; border-left: 5px solid #ff0000; list-style: none; position: relative; border-radius: 0 5px 5px 0; }
+        .pb-card { background: #2a2200; border-left: 5px solid gold; padding: 15px; margin: 10px 0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+        .coach-msg { display: block; margin-top: 10px; font-family: sans-serif; font-weight: bold; font-size: 0.85rem; padding: 8px; border-radius: 3px; }
+        .go-up { background: #004d00; color: #00ff00; }
+        .stay { background: #4d4d00; color: #ffff00; }
+        .drop { background: #4d0000; color: #ff4d4d; }
+        .del-btn { position: absolute; top: 10px; right: 10px; background: #ff0000; color: white; border: 1px solid white; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; }
+        #customEventBox { display: none; border: 1px solid #ff0000; }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <h1>STRONGMAN PRO</h1>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTab('lifts')">LIFTS</button>
+        <button class="tab-btn" onclick="openTab('planner')">📅 PLAN</button>
+        <button class="tab-btn" onclick="openTab('pbs')">🏆 PBs</button>
+        <button class="tab-btn" onclick="openTab('cardio')">CARDIO</button>
+    </div>
+
+    <div id="lifts" class="tab-content active">
+        <div class="timer-box">
+            <span id="timerDisplay">60s</span>
+            <button class="timer-btn" onclick="startTimer()">START</button>
+            <button class="timer-btn" onclick="resetTimer()">RESET</button>
+        </div>
+        <span class="stat-badge">EST 1RM: <span id="est1RM">0</span> KG</span>
+        <select id="event" onchange="checkCustom()"></select>
+        <input type="text" id="customEventBox" placeholder="Exercise Name...">
+        <div class="input-row">
+            <input type="number" id="weight" class="small-input" placeholder="KG" oninput="calc1RM()">
+            <input type="number" id="reps" class="small-input" placeholder="REPS" oninput="calc1RM()">
+            <input type="number" id="sets" class="small-input" placeholder="SETS">
+        </div>
+        <button class="timer-btn" style="width:100%; background:#333; margin-bottom:5px;" onclick="showPlates()">PLATE CALC (20kg Bar)</button>
+        <div id="plateResult" style="color:#888; font-size:0.8rem; text-align:center; margin-bottom:10px;"></div>
+        <select id="difficulty">
+            <option value="easy">EASY (RPE 6-7)</option>
+            <option value="medium">SMOOTH (RPE 8)</option>
+            <option value="hard">GRINDER (RPE 9-10)</option>
+            <option value="fail">FAILED REPS</option>
+        </select>
+        <button class="main-btn" onclick="addLift()">LOG WORKOUT</button>
+        <ul id="liftList"></ul>
+    </div>
+
+    <div id="planner" class="tab-content">
+        <h2 style="color:#ff0000; text-align:center;">WEEKLY PLANNER</h2>
+        <div id="plannerContainer"></div>
+    </div>
+
+    <div id="pbs" class="tab-content">
+        <h2 style="color:gold; text-align:center;">RECORDS</h2>
+        <div id="pbContainer"></div>
+    </div>
+
+    <div id="cardio" class="tab-content">
+        <input type="text" id="cEvent" placeholder="Conditioning">
+        <input type="text" id="cStats" placeholder="Stats">
+        <button class="main-btn" onclick="addCardio()">LOG CARDIO</button>
+        <ul id="cardioList"></ul>
+    </div>
+</div>
+<script>
+    let standardLifts = ["Log Press", "Axle Deadlift", "Squat", "Rows", "Strict Press"];
+    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    let timerInt;
+
+    window.onload = function() { updateDropdown(); render(); renderPlanner(); };
+
+    function renderPlanner() {
+        const plan = JSON.parse(localStorage.getItem('strongmanPlan')) || {};
+        const today = new Date().toLocaleDateString('en-us', {weekday: 'long'});
+        document.getElementById('plannerContainer').innerHTML = days.map(day => {
+            const ex = plan[day] || "";
+            return `<div class="day-card ${day === today ? 'active-day' : ''}">
+                <div class="day-title">${day.toUpperCase()} ${ex ? `<button class="start-plan-btn" onclick="loadPlannedLift('${ex}')">TRAIN</button>` : ''}</div>
+                <div class="plan-input-group">
+                    <input type="text" id="plan-${day}" placeholder="Plan..." value="${ex}" style="padding:8px; width:70%; background:#111; color:white; border:1px solid #444;">
+                    <button class="timer-btn" style="background:#cc0000" onclick="savePlan('${day}')">SAVE</button>
+                </div></div>`;
+        }).join('');
+    }
+
+    function savePlan(day) {
+        let plan = JSON.parse(localStorage.getItem('strongmanPlan')) || {};
+        plan[day] = document.getElementById(`plan-${day}`).value;
+        localStorage.setItem('strongmanPlan', JSON.stringify(plan));
+        renderPlanner();
+    }
+
+    function loadPlannedLift(ex) {
+        openTab('lifts');
+        const s = document.getElementById('event');
+        let found = false;
+        for (let i = 0; i < s.options.length; i++) {
+            if (ex.toLowerCase().includes(s.options[i].value.toLowerCase())) { s.selectedIndex = i; found = true; break; }
+        }
+        if (!found) { s.value = "CUSTOM"; checkCustom(); document.getElementById('customEventBox').value = ex; }
+    }
+
+    function calc1RM() {
+        const w = document.getElementById('weight').value;
+        const r = document.getElementById('reps').value;
+        document.getElementById('est1RM').innerText = (w > 0 && r > 0) ? Math.round(w * (1 + (r / 30))) : "0";
+    }
+
+    function showPlates() {
+        let w = document.getElementById('weight').value;
+        if (!w || w < 20) { document.getElementById('plateResult').innerText = "Enter weight > 20kg"; return; }
+        let side = (w - 20) / 2;
+        const plates = [25, 20, 15, 10, 5, 2.5, 1.25];
+        let res = [];
+        plates.forEach(p => { while (side >= p) { res.push(p); side -= p; }});
+        document.getElementById('plateResult').innerText = res.length > 0 ? "Side: " + res.join(", ") + "kg" : "Empty Bar";
+    }
+
+    function openTab(name) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(name).classList.add('active');
+        if(name === 'pbs') renderPBs();
+    }
+
+    function startTimer() {
+        clearInterval(timerInt); let t = 60;
+        timerInt = setInterval(() => {
+            t--; document.getElementById('timerDisplay').innerText = t + "s";
+            if(t <= 0) { clearInterval(timerInt); alert("REST OVER!"); }
+        }, 1000);
+    }
+
+    function resetTimer() { clearInterval(timerInt); document.getElementById('timerDisplay').innerText = "60s"; }
+
+    function updateDropdown() {
+        const s = document.getElementById('event');
+        const custom = JSON.parse(localStorage.getItem('customLifts')) || [];
+        s.innerHTML = [...standardLifts, ...custom].map(l => `<option value="${l}">${l}</option>`).join('') + `<option value="CUSTOM">-- New --</option>`;
+    }
+
+    function checkCustom() { document.getElementById('customEventBox').style.display = (document.getElementById('event').value === "CUSTOM") ? "block" : "none"; }
+
+    function addLift() {
+        const w = document.getElementById('weight').value, r = document.getElementById('reps').value, s = document.getElementById('sets').value, diff = document.getElementById('difficulty').value;
+        let name = document.getElementById('event').value;
+        if(name === "CUSTOM") {
+            name = document.getElementById('customEventBox').value.trim();
+            if(!name) return;
+            let c = JSON.parse(localStorage.getItem('customLifts')) || [];
+            if(!c.includes(name)) { c.push(name); localStorage.setItem('customLifts', JSON.stringify(c)); }
+            updateDropdown(); document.getElementById('event').value = name;
+        }
+        if(!w || !r || !s) return;
+        let adv = diff==='easy' ? "Add 5kg" : diff==='medium' ? "Add 2.5kg" : diff==='hard' ? "Master this" : "Drop 10%";
+        let cls = diff==='easy'||diff==='medium' ? "go-up" : diff==='hard' ? "stay" : "drop";
+        const l = { id: Date.now(), event: name, w, r, s, vol: w*r*s, date: new Date().toLocaleDateString(), advice: "COACH: " + adv, adviceClass: cls };
+        const data = JSON.parse(localStorage.getItem('myLifts')) || [];
+        data.unshift(l); localStorage.setItem('myLifts', JSON.stringify(data));
+        render(); startTimer();
+        document.getElementById('weight').value = ""; document.getElementById('reps').value = ""; document.getElementById('sets').value = "";
+    }
+
+    function render() {
+        const lifts = JSON.parse(localStorage.getItem('myLifts')) || [];
+        document.getElementById('liftList').innerHTML = lifts.map(l => `<li><button class="del-btn" onclick="deleteItem('lifts', ${l.id})">×</button><strong>${l.event}</strong> | ${l.s}x${l.r} @ ${l.w}KG<br><span class="coach-msg ${l.adviceClass}">${l.advice}</span></li>`).join('');
+    }
+
+    function renderPBs() {
+        const lifts = JSON.parse(localStorage.getItem('myLifts')) || [];
+        const pbs = {};
+        lifts.forEach(l => { if(!pbs[l.event] || parseFloat(l.w) > parseFloat(pbs[l.event].w)) pbs[l.event] = l; });
+        document.getElementById('pbContainer').innerHTML = Object.values(pbs).map(p => `<div class="pb-card"><div><strong>${p.event}</strong></div><div style="font-size: 1.5rem; color: gold;">${p.w} KG 🏆</div></div>`).join('');
+    }
+    function openTab(name) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(name).classList.add('active');
+        if(name === 'pbs') renderPBs();
+    }
+
+    function startTimer() {
+        clearInterval(timerInt); let t = 60;
+        timerInt = setInterval(() => {
+            t--; document.getElementById('timerDisplay').innerText = t + "s";
+            if(t <= 0) { clearInterval(timerInt); alert("REST OVER! LIFT!"); }
+        }, 1000);
+    }
+
+    function resetTimer() { clearInterval(timerInt); document.getElementById('timerDisplay').innerText = "60s"; }
+
+    function updateDropdown() {
+        const s = document.getElementById('event');
+        const custom = JSON.parse(localStorage.getItem('customLifts')) || [];
+        s.innerHTML = [...standardLifts, ...custom].map(l => `<option value="${l}">${l}</option>`).join('') + `<option value="CUSTOM">-- New Exercise --</option>`;
+    }
+
+    function checkCustom() { document.getElementById('customEventBox').style.display = (document.getElementById('event').value === "CUSTOM") ? "block" : "none"; }
+
+    function addLift() {
+        const w = document.getElementById('weight').value, r = document.getElementById('reps').value, s = document.getElementById('sets').value, diff = document.getElementById('difficulty').value;
+        let name = document.getElementById('event').value;
+        if(name === "CUSTOM") {
+            name = document.getElementById('customEventBox').value.trim();
+            if(!name) return;
+            let c = JSON.parse(localStorage.getItem('customLifts')) || [];
+            if(!c.includes(name)) { c.push(name); localStorage.setItem('customLifts', JSON.stringify(c)); }
+            updateDropdown(); document.getElementById('event').value = name;
+        }
+        if(!w || !r || !s) return;
+        let adv = diff==='easy' ? "Add 5kg" : diff==='medium' ? "Add 2.5kg" : diff==='hard' ? "Master this" : "Drop 10%";
+        let cls = diff==='easy'||diff==='medium' ? "go-up" : diff==='hard' ? "stay" : "drop";
+        const l = { id: Date.now(), event: name, w, r, s, vol: w*r*s, date: new Date().toLocaleDateString(), advice: "COACH: " + adv, adviceClass: cls };
+        const data = JSON.parse(localStorage.getItem('myLifts')) || [];
+        data.unshift(l); localStorage.setItem('myLifts', JSON.stringify(data));
+        render(); startTimer();
+        document.getElementById('weight').value = ""; document.getElementById('reps').value = ""; document.getElementById('sets').value = "";
+    }
+
+    function render() {
+        const lifts = JSON.parse(localStorage.getItem('myLifts')) || [];
+        document.getElementById('liftList').innerHTML = lifts.map(l => `<li><button class="del-btn" onclick="deleteItem('lifts', ${l.id})">×</button><strong>${l.event}</strong> | ${l.s}x${l.r} @ ${l.w}KG<br><span class="coach-msg ${l.adviceClass}">${l.advice}</span></li>`).join('');
+    }
+
+    function renderPBs() {
+        const lifts = JSON.parse(localStorage.getItem('myLifts')) || [];
+        const pbs = {};
+        lifts.forEach(l => { if(!pbs[l.event] || parseFloat(l.w) > parseFloat(pbs[l.event].w)) pbs[l.event] = l; });
+        document.getElementById('pbContainer').innerHTML = Object.values(pbs).map(p => `<div class="pb-card"><div><strong>${p.event}</strong></div><div style="font-size: 1.5rem; color: gold;">${p.w} KG 🏆</div></div>`).join('');
+    }
+
+    function addCardio() {
+        const e = document.getElementById('cEvent').value, s = document.getElementById('cStats').value;
+        if(!e || !s) return;
+        const data = JSON.parse(localStorage.getItem('myCardio')) || [];
+        data.unshift({ id: Date.now(), event: e, stats: s, date: new Date().toLocaleDateString() });
+        localStorage.setItem('myCardio', JSON.stringify(data));
+        renderCardio();
+        document.getElementById('cEvent').value = ""; document.getElementById('cStats').value = "";
+    }
+
+    function renderCardio() {
+        const d = JSON.parse(localStorage.getItem('myCardio')) || [];
+        document.getElementById('cardioList').innerHTML = d.map(c => `<li><button class="del-btn" onclick="deleteItem('cardio', ${c.id})">×</button><strong>${c.event}:</strong> ${c.stats}</li>`).join('');
+    }
+
+    function deleteItem(type, id) {
+        if(confirm("Delete?")) {
+            const key = type === 'lifts' ? 'myLifts' : 'myCardio';
+            let d = JSON.parse(localStorage.getItem(key)).filter(i => i.id !== id);
+            localStorage.setItem(key, JSON.stringify(d));
+            render(); if(type === 'lifts') renderPBs();
+        }
+    }
+</script>
+</body>
+</html>
