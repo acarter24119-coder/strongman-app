@@ -53,6 +53,7 @@
         <button class="tab-btn" onclick="openTab('planner')">📅 PLAN</button>
         <button class="tab-btn" onclick="openTab('pbs')">🏆 PBs</button>
         <button class="tab-btn" onclick="openTab('cardio')">CARDIO</button>
+        <button class="tab-btn" onclick="openTab('history')">📜 HISTORY</button>
     </div>
 
     <div id="lifts" class="tab-content active">
@@ -78,6 +79,7 @@
             <option value="fail">FAILED REPS</option>
         </select>
         <button class="main-btn" onclick="addLift()">LOG WORKOUT</button>
+        <button class="main-btn" style="background:#0055cc; margin-top:10px;" onclick="finishWorkout()">FINISH WORKOUT</button>
         <ul id="liftList"></ul>
     </div>
 
@@ -97,13 +99,24 @@
         <button class="main-btn" onclick="addCardio()">LOG CARDIO</button>
         <ul id="cardioList"></ul>
     </div>
+
+    <div id="history" class="tab-content">
+        <h2 style="color:gold; text-align:center;">WORKOUT HISTORY</h2>
+        <div id="historyContainer"></div>
+        <div id="historyDetail" style="margin-top: 20px;"></div>
+    </div>
 </div>
 <script>
     let standardLifts = ["Log Press", "Axle Deadlift", "Squat", "Rows", "Strict Press"];
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
     let timerInt;
 
-    window.onload = function() { updateDropdown(); render(); renderPlanner(); };
+    window.onload = function() { 
+        updateDropdown(); 
+        render(); 
+        renderPlanner(); 
+        renderHistory(); 
+    };
 
     function renderPlanner() {
         const plan = JSON.parse(localStorage.getItem('strongmanPlan')) || {};
@@ -131,9 +144,17 @@
         const s = document.getElementById('event');
         let found = false;
         for (let i = 0; i < s.options.length; i++) {
-            if (ex.toLowerCase().includes(s.options[i].value.toLowerCase())) { s.selectedIndex = i; found = true; break; }
+            if (ex.toLowerCase().includes(s.options[i].value.toLowerCase())) { 
+                s.selectedIndex = i; 
+                found = true; 
+                break; 
+            }
         }
-        if (!found) { s.value = "CUSTOM"; checkCustom(); document.getElementById('customEventBox').value = ex; }
+        if (!found) { 
+            s.value = "CUSTOM"; 
+            checkCustom(); 
+            document.getElementById('customEventBox').value = ex; 
+        }
     }
 
     function calc1RM() {
@@ -144,11 +165,19 @@
 
     function showPlates() {
         let w = document.getElementById('weight').value;
-        if (!w || w < 20) { document.getElementById('plateResult').innerText = "Enter weight > 20kg"; return; }
+        if (!w || w < 20) { 
+            document.getElementById('plateResult').innerText = "Enter weight > 20kg"; 
+            return; 
+        }
         let side = (w - 20) / 2;
         const plates = [25, 20, 15, 10, 5, 2.5, 1.25];
         let res = [];
-        plates.forEach(p => { while (side >= p) { res.push(p); side -= p; }});
+        plates.forEach(p => { 
+            while (side >= p) { 
+                res.push(p); 
+                side -= p; 
+            }
+        });
         document.getElementById('plateResult').innerText = res.length > 0 ? "Side: " + res.join(", ") + "kg" : "Empty Bar";
     }
 
@@ -157,73 +186,26 @@
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(name).classList.add('active');
         if(name === 'pbs') renderPBs();
+        if(name === 'history') renderHistory();
     }
 
     function startTimer() {
-        clearInterval(timerInt); let t = 60;
+        clearInterval(timerInt); 
+        let t = 60;
         timerInt = setInterval(() => {
-            t--; document.getElementById('timerDisplay').innerText = t + "s";
-            if(t <= 0) { clearInterval(timerInt); alert("REST OVER!"); }
+            t--; 
+            document.getElementById('timerDisplay').innerText = t + "s";
+            if(t <= 0) { 
+                clearInterval(timerInt); 
+                alert("REST OVER! LIFT!"); 
+            }
         }, 1000);
     }
 
-    function resetTimer() { clearInterval(timerInt); document.getElementById('timerDisplay').innerText = "60s"; }
-
-    function updateDropdown() {
-        const s = document.getElementById('event');
-        const custom = JSON.parse(localStorage.getItem('customLifts')) || [];
-        s.innerHTML = [...standardLifts, ...custom].map(l => `<option value="${l}">${l}</option>`).join('') + `<option value="CUSTOM">-- New --</option>`;
+    function resetTimer() { 
+        clearInterval(timerInt); 
+        document.getElementById('timerDisplay').innerText = "60s"; 
     }
-
-    function checkCustom() { document.getElementById('customEventBox').style.display = (document.getElementById('event').value === "CUSTOM") ? "block" : "none"; }
-
-    function addLift() {
-        const w = document.getElementById('weight').value, r = document.getElementById('reps').value, s = document.getElementById('sets').value, diff = document.getElementById('difficulty').value;
-        let name = document.getElementById('event').value;
-        if(name === "CUSTOM") {
-            name = document.getElementById('customEventBox').value.trim();
-            if(!name) return;
-            let c = JSON.parse(localStorage.getItem('customLifts')) || [];
-            if(!c.includes(name)) { c.push(name); localStorage.setItem('customLifts', JSON.stringify(c)); }
-            updateDropdown(); document.getElementById('event').value = name;
-        }
-        if(!w || !r || !s) return;
-        let adv = diff==='easy' ? "Add 5kg" : diff==='medium' ? "Add 2.5kg" : diff==='hard' ? "Master this" : "Drop 10%";
-        let cls = diff==='easy'||diff==='medium' ? "go-up" : diff==='hard' ? "stay" : "drop";
-        const l = { id: Date.now(), event: name, w, r, s, vol: w*r*s, date: new Date().toLocaleDateString(), advice: "COACH: " + adv, adviceClass: cls };
-        const data = JSON.parse(localStorage.getItem('myLifts')) || [];
-        data.unshift(l); localStorage.setItem('myLifts', JSON.stringify(data));
-        render(); startTimer();
-        document.getElementById('weight').value = ""; document.getElementById('reps').value = ""; document.getElementById('sets').value = "";
-    }
-
-    function render() {
-        const lifts = JSON.parse(localStorage.getItem('myLifts')) || [];
-        document.getElementById('liftList').innerHTML = lifts.map(l => `<li><button class="del-btn" onclick="deleteItem('lifts', ${l.id})">×</button><strong>${l.event}</strong> | ${l.s}x${l.r} @ ${l.w}KG<br><span class="coach-msg ${l.adviceClass}">${l.advice}</span></li>`).join('');
-    }
-
-    function renderPBs() {
-        const lifts = JSON.parse(localStorage.getItem('myLifts')) || [];
-        const pbs = {};
-        lifts.forEach(l => { if(!pbs[l.event] || parseFloat(l.w) > parseFloat(pbs[l.event].w)) pbs[l.event] = l; });
-        document.getElementById('pbContainer').innerHTML = Object.values(pbs).map(p => `<div class="pb-card"><div><strong>${p.event}</strong></div><div style="font-size: 1.5rem; color: gold;">${p.w} KG 🏆</div></div>`).join('');
-    }
-    function openTab(name) {
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(name).classList.add('active');
-        if(name === 'pbs') renderPBs();
-    }
-
-    function startTimer() {
-        clearInterval(timerInt); let t = 60;
-        timerInt = setInterval(() => {
-            t--; document.getElementById('timerDisplay').innerText = t + "s";
-            if(t <= 0) { clearInterval(timerInt); alert("REST OVER! LIFT!"); }
-        }, 1000);
-    }
-
-    function resetTimer() { clearInterval(timerInt); document.getElementById('timerDisplay').innerText = "60s"; }
 
     function updateDropdown() {
         const s = document.getElementById('event');
@@ -231,53 +213,107 @@
         s.innerHTML = [...standardLifts, ...custom].map(l => `<option value="${l}">${l}</option>`).join('') + `<option value="CUSTOM">-- New Exercise --</option>`;
     }
 
-    function checkCustom() { document.getElementById('customEventBox').style.display = (document.getElementById('event').value === "CUSTOM") ? "block" : "none"; }
+    function checkCustom() { 
+        document.getElementById('customEventBox').style.display = (document.getElementById('event').value === "CUSTOM") ? "block" : "none"; 
+    }
 
     function addLift() {
-        const w = document.getElementById('weight').value, r = document.getElementById('reps').value, s = document.getElementById('sets').value, diff = document.getElementById('difficulty').value;
+        const w = document.getElementById('weight').value, 
+              r = document.getElementById('reps').value, 
+              s = document.getElementById('sets').value, 
+              diff = document.getElementById('difficulty').value;
         let name = document.getElementById('event').value;
+        
         if(name === "CUSTOM") {
             name = document.getElementById('customEventBox').value.trim();
             if(!name) return;
             let c = JSON.parse(localStorage.getItem('customLifts')) || [];
-            if(!c.includes(name)) { c.push(name); localStorage.setItem('customLifts', JSON.stringify(c)); }
-            updateDropdown(); document.getElementById('event').value = name;
+            if(!c.includes(name)) { 
+                c.push(name); 
+                localStorage.setItem('customLifts', JSON.stringify(c)); 
+            }
+            updateDropdown(); 
+            document.getElementById('event').value = name;
         }
+        
         if(!w || !r || !s) return;
+        
         let adv = diff==='easy' ? "Add 5kg" : diff==='medium' ? "Add 2.5kg" : diff==='hard' ? "Master this" : "Drop 10%";
         let cls = diff==='easy'||diff==='medium' ? "go-up" : diff==='hard' ? "stay" : "drop";
-        const l = { id: Date.now(), event: name, w, r, s, vol: w*r*s, date: new Date().toLocaleDateString(), advice: "COACH: " + adv, adviceClass: cls };
+        
+        const l = { 
+            id: Date.now(), 
+            event: name, 
+            w, r, s, 
+            vol: w*r*s, 
+            date: new Date().toLocaleDateString(), 
+            advice: "COACH: " + adv, 
+            adviceClass: cls 
+        };
+        
         const data = JSON.parse(localStorage.getItem('myLifts')) || [];
-        data.unshift(l); localStorage.setItem('myLifts', JSON.stringify(data));
-        render(); startTimer();
-        document.getElementById('weight').value = ""; document.getElementById('reps').value = ""; document.getElementById('sets').value = "";
+        data.unshift(l); 
+        localStorage.setItem('myLifts', JSON.stringify(data));
+        
+        render(); 
+        startTimer();
+        
+        document.getElementById('weight').value = ""; 
+        document.getElementById('reps').value = ""; 
+        document.getElementById('sets').value = "";
     }
 
     function render() {
         const lifts = JSON.parse(localStorage.getItem('myLifts')) || [];
-        document.getElementById('liftList').innerHTML = lifts.map(l => `<li><button class="del-btn" onclick="deleteItem('lifts', ${l.id})">×</button><strong>${l.event}</strong> | ${l.s}x${l.r} @ ${l.w}KG<br><span class="coach-msg ${l.adviceClass}">${l.advice}</span></li>`).join('');
+        document.getElementById('liftList').innerHTML = lifts.map(l => `
+            <li>
+                <button class="del-btn" onclick="deleteItem('lifts', ${l.id})">×</button>
+                <strong>${l.event}</strong> | ${l.s}x${l.r} @ ${l.w}KG<br>
+                <span class="coach-msg ${l.adviceClass}">${l.advice}</span>
+            </li>
+        `).join('');
     }
-
-    function renderPBs() {
+function renderPBs() {
         const lifts = JSON.parse(localStorage.getItem('myLifts')) || [];
         const pbs = {};
-        lifts.forEach(l => { if(!pbs[l.event] || parseFloat(l.w) > parseFloat(pbs[l.event].w)) pbs[l.event] = l; });
-        document.getElementById('pbContainer').innerHTML = Object.values(pbs).map(p => `<div class="pb-card"><div><strong>${p.event}</strong></div><div style="font-size: 1.5rem; color: gold;">${p.w} KG 🏆</div></div>`).join('');
+        lifts.forEach(l => { 
+            if(!pbs[l.event] || parseFloat(l.w) > parseFloat(pbs[l.event].w)) {
+                pbs[l.event] = l; 
+            }
+        });
+        document.getElementById('pbContainer').innerHTML = Object.values(pbs).map(p => `
+            <div class="pb-card">
+                <div><strong>${p.event}</strong></div>
+                <div style="font-size: 1.5rem; color: gold;">${p.w} KG 🏆</div>
+            </div>
+        `).join('');
     }
 
     function addCardio() {
-        const e = document.getElementById('cEvent').value, s = document.getElementById('cStats').value;
+        const e = document.getElementById('cEvent').value, 
+              s = document.getElementById('cStats').value;
         if(!e || !s) return;
         const data = JSON.parse(localStorage.getItem('myCardio')) || [];
-        data.unshift({ id: Date.now(), event: e, stats: s, date: new Date().toLocaleDateString() });
+        data.unshift({ 
+            id: Date.now(), 
+            event: e, 
+            stats: s, 
+            date: new Date().toLocaleDateString() 
+        });
         localStorage.setItem('myCardio', JSON.stringify(data));
         renderCardio();
-        document.getElementById('cEvent').value = ""; document.getElementById('cStats').value = "";
+        document.getElementById('cEvent').value = ""; 
+        document.getElementById('cStats').value = "";
     }
 
     function renderCardio() {
         const d = JSON.parse(localStorage.getItem('myCardio')) || [];
-        document.getElementById('cardioList').innerHTML = d.map(c => `<li><button class="del-btn" onclick="deleteItem('cardio', ${c.id})">×</button><strong>${c.event}:</strong> ${c.stats}</li>`).join('');
+        document.getElementById('cardioList').innerHTML = d.map(c => `
+            <li>
+                <button class="del-btn" onclick="deleteItem('cardio', ${c.id})">×</button>
+                <strong>${c.event}:</strong> ${c.stats}
+            </li>
+        `).join('');
     }
 
     function deleteItem(type, id) {
@@ -285,9 +321,73 @@
             const key = type === 'lifts' ? 'myLifts' : 'myCardio';
             let d = JSON.parse(localStorage.getItem(key)).filter(i => i.id !== id);
             localStorage.setItem(key, JSON.stringify(d));
-            render(); if(type === 'lifts') renderPBs();
+            render(); 
+            if(type === 'lifts') renderPBs();
         }
+    }
+
+    // NEW: Save current workout to history
+    function finishWorkout() {
+        const lifts = JSON.parse(localStorage.getItem('myLifts')) || [];
+        const cardio = JSON.parse(localStorage.getItem('myCardio')) || [];
+        const today = new Date().toLocaleDateString();
+
+        // Filter to get only today's entries
+        const todaysLifts = lifts.filter(l => l.date === today);
+        const todaysCardio = cardio.filter(c => c.date === today);
+
+        if (todaysLifts.length === 0 && todaysCardio.length === 0) {
+            alert("No workout data to save for today!");
+            return;
+        }
+
+        // Save to history storage
+        const history = JSON.parse(localStorage.getItem('workoutHistory')) || {};
+        history[today] = { lifts: todaysLifts, cardio: todaysCardio };
+        localStorage.setItem('workoutHistory', JSON.stringify(history));
+
+        alert(`Workout saved for ${today}!`);
+        renderHistory();
+    }
+
+    // NEW: Show list of dates
+    function renderHistory() {
+        const history = JSON.parse(localStorage.getItem('workoutHistory')) || {};
+        const dates = Object.keys(history).reverse(); // Show newest first
+
+        if (dates.length === 0) {
+            document.getElementById('historyContainer').innerHTML = "<p style='text-align:center; color:#888;'>No history yet. Finish a workout to see it here.</p>";
+            return;
+        }
+
+        document.getElementById('historyContainer').innerHTML = dates.map(date => `
+            <div class="day-card" onclick="showHistoryDetail('${date}')" style="cursor:pointer;">
+                <div class="day-title">${date} <span style="color:#888;">▶</span></div>
+            </div>
+        `).join('');
+    }
+
+    // NEW: Show details for a specific date
+    function showHistoryDetail(date) {
+        const history = JSON.parse(localStorage.getItem('workoutHistory')) || {};
+        const entry = history[date];
+
+        if (!entry) return;
+
+        let liftsHtml = entry.lifts.map(l => `
+            <li><strong>${l.event}</strong> | ${l.s}x${l.r} @ ${l.w}KG</li>
+        `).join('');
+
+        let cardioHtml = entry.cardio.map(c => `
+            <li><strong>${c.event}</strong>: ${c.stats}</li>
+        `).join('');
+
+        document.getElementById('historyDetail').innerHTML = `
+            <h3 style="color:#ff0000; text-align:center;">${date}</h3>
+            ${liftsHtml ? `<h4 style="margin:10px 0 5px 0;">Lifts:</h4><ul style="padding:0;">${liftsHtml}</ul>` : ''}
+            ${cardioHtml ? `<h4 style="margin:10px 0 5px 0;">Cardio:</h4><ul style="padding:0;">${cardioHtml}</ul>` : ''}
+        `;
     }
 </script>
 </body>
-</html>
+</html>   
