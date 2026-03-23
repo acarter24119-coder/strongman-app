@@ -15,11 +15,14 @@
         .tab-content { display: none; text-align: left; }
         .tab-content.active { display: block; }
 
-        /* Planner Styles */
+        /* Planner Styles - UPDATED for multiple exercises */
         .day-card { background: #222; margin: 10px 0; padding: 12px; border-radius: 5px; border-left: 5px solid #444; }
         .day-card.active-day { border-left-color: #ff0000; background: #2a1010; }
         .day-title { color: #ff0000; font-size: 1.2rem; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
         .plan-input-group { display: flex; gap: 5px; margin-top: 5px; }
+        .exercise-list { margin: 10px 0; padding: 0; list-style: none; }
+        .exercise-list li { background: #1a1a1a; margin: 5px 0; padding: 8px; border-radius: 3px; display: flex; justify-content: space-between; align-items: center; }
+        .add-ex-btn { background: #008800; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-family: 'Impact'; font-size: 0.8rem; margin-top: 5px; }
         .start-plan-btn { background: #008800; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-family: 'Impact'; font-size: 0.8rem; }
 
         /* Timer & Stats */
@@ -42,6 +45,7 @@
         .stay { background: #4d4d00; color: #ffff00; }
         .drop { background: #4d0000; color: #ff4d4d; }
         .del-btn { position: absolute; top: 10px; right: 10px; background: #ff0000; color: white; border: 1px solid white; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; }
+        .del-ex-btn { background: #cc0000; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; }
         #customEventBox { display: none; border: 1px solid #ff0000; }
     </style>
 </head>
@@ -118,24 +122,57 @@
         renderHistory(); 
     };
 
+    // UPDATED: Render Planner with multiple exercises support
     function renderPlanner() {
         const plan = JSON.parse(localStorage.getItem('strongmanPlan')) || {};
         const today = new Date().toLocaleDateString('en-us', {weekday: 'long'});
         document.getElementById('plannerContainer').innerHTML = days.map(day => {
-            const ex = plan[day] || "";
+            // Load exercises array or default to empty array
+            const exercises = plan[day] || [];
+            const exerciseHtml = exercises.map((ex, index) => `
+                <li>
+                    ${ex}
+                    <button class="del-ex-btn" onclick="removeExercise('${day}', ${index})">×</button>
+                </li>
+            `).join('');
+
             return `<div class="day-card ${day === today ? 'active-day' : ''}">
-                <div class="day-title">${day.toUpperCase()} ${ex ? `<button class="start-plan-btn" onclick="loadPlannedLift('${ex}')">TRAIN</button>` : ''}</div>
+                <div class="day-title">${day.toUpperCase()} ${exercises.length > 0 ? `<button class="start-plan-btn" onclick="loadPlannedLift('${exercises.join(', ')}')">TRAIN</button>` : ''}</div>
+                <ul class="exercise-list" id="list-${day}">${exerciseHtml}</ul>
                 <div class="plan-input-group">
-                    <input type="text" id="plan-${day}" placeholder="Plan..." value="${ex}" style="padding:8px; width:70%; background:#111; color:white; border:1px solid #444;">
-                    <button class="timer-btn" style="background:#cc0000" onclick="savePlan('${day}')">SAVE</button>
+                    <input type="text" id="input-${day}" placeholder="Add exercise..." style="padding:8px; width:70%; background:#111; color:white; border:1px solid #444;">
+                    <button class="add-ex-btn" onclick="addExercise('${day}')">ADD</button>
                 </div></div>`;
         }).join('');
     }
 
-    function savePlan(day) {
+    // NEW: Add an exercise to a specific day
+    function addExercise(day) {
+        const input = document.getElementById(`input-${day}`);
+        const text = input.value.trim();
+        if (!text) return;
+
         let plan = JSON.parse(localStorage.getItem('strongmanPlan')) || {};
-        plan[day] = document.getElementById(`plan-${day}`).value;
+        if (!plan[day]) plan[day] = [];
+        plan[day].push(text);
         localStorage.setItem('strongmanPlan', JSON.stringify(plan));
+        
+        input.value = "";
+        renderPlanner();
+    }
+
+    // NEW: Remove an exercise from a specific day
+    function removeExercise(day, index) {
+        let plan = JSON.parse(localStorage.getItem('strongmanPlan')) || {};
+        if (plan[day]) {
+            plan[day].splice(index, 1);
+            localStorage.setItem('strongmanPlan', JSON.stringify(plan));
+            renderPlanner();
+        }
+    }
+
+    function savePlan(day) {
+        // Kept for compatibility, but now we save on Add/Remove
         renderPlanner();
     }
 
@@ -216,8 +253,7 @@
     function checkCustom() { 
         document.getElementById('customEventBox').style.display = (document.getElementById('event').value === "CUSTOM") ? "block" : "none"; 
     }
-
-    function addLift() {
+function addLift() {
         const w = document.getElementById('weight').value, 
               r = document.getElementById('reps').value, 
               s = document.getElementById('sets').value, 
@@ -273,7 +309,8 @@
             </li>
         `).join('');
     }
-function renderPBs() {
+
+    function renderPBs() {
         const lifts = JSON.parse(localStorage.getItem('myLifts')) || [];
         const pbs = {};
         lifts.forEach(l => { 
@@ -326,7 +363,7 @@ function renderPBs() {
         }
     }
 
-    // NEW: Save current workout to history
+    // UPDATED: Save current workout to history AND clear the screen
     function finishWorkout() {
         const lifts = JSON.parse(localStorage.getItem('myLifts')) || [];
         const cardio = JSON.parse(localStorage.getItem('myCardio')) || [];
@@ -346,11 +383,19 @@ function renderPBs() {
         history[today] = { lifts: todaysLifts, cardio: todaysCardio };
         localStorage.setItem('workoutHistory', JSON.stringify(history));
 
-        alert(`Workout saved for ${today}!`);
-        renderHistory();
+        // --- NEW: Clear the current workout data so the screen is fresh ---
+        // Keep only entries that are NOT from today
+        const remainingLifts = lifts.filter(l => l.date !== today);
+        const remainingCardio = cardio.filter(c => c.date !== today);
+        localStorage.setItem('myLifts', JSON.stringify(remainingLifts));
+        localStorage.setItem('myCardio', JSON.stringify(remainingCardio));
+
+        alert(`Workout saved for ${today}! Screen cleared.`);
+        render(); // Refresh the display to show it's empty
+        renderHistory(); // Update history view
     }
 
-    // NEW: Show list of dates
+    // UPDATED: Show list of dates
     function renderHistory() {
         const history = JSON.parse(localStorage.getItem('workoutHistory')) || {};
         const dates = Object.keys(history).reverse(); // Show newest first
@@ -362,12 +407,12 @@ function renderPBs() {
 
         document.getElementById('historyContainer').innerHTML = dates.map(date => `
             <div class="day-card" onclick="showHistoryDetail('${date}')" style="cursor:pointer;">
-                <div class="day-title">${date} <span style="color:#888;">▶</span></div>
+                <div class="day-title">${date} <span style="color:#888;">▶️</span></div>
             </div>
         `).join('');
     }
 
-    // NEW: Show details for a specific date
+    // UPDATED: Show details including Coach Advice
     function showHistoryDetail(date) {
         const history = JSON.parse(localStorage.getItem('workoutHistory')) || {};
         const entry = history[date];
@@ -375,7 +420,10 @@ function renderPBs() {
         if (!entry) return;
 
         let liftsHtml = entry.lifts.map(l => `
-            <li><strong>${l.event}</strong> | ${l.s}x${l.r} @ ${l.w}KG</li>
+            <li>
+                <strong>${l.event}</strong> | ${l.s}x${l.r} @ ${l.w}KG<br>
+                <span class="coach-msg ${l.adviceClass}">${l.advice}</span>
+            </li>
         `).join('');
 
         let cardioHtml = entry.cardio.map(c => `
@@ -390,4 +438,4 @@ function renderPBs() {
     }
 </script>
 </body>
-</html>   
+</html>    
