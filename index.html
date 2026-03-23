@@ -250,9 +250,18 @@
         s.innerHTML = [...standardLifts, ...custom].map(l => `<option value="${l}">${l}</option>`).join('') + `<option value="CUSTOM">-- New Exercise --</option>`;
     }
 
-    function checkCustom() { 
-        document.getElementById('customEventBox').style.display = (document.getElementById('event').value === "CUSTOM") ? "block" : "none"; 
+    function checkCustom() {
+    const inputBox = document.getElementById('customEventBox');
+    if (document.getElementById('event').value === "CUSTOM") {
+        inputBox.style.display = "block";
+        inputBox.disabled = false;  // This makes sure you can type
+        inputBox.value = "";        // Clear any old text
+        inputBox.focus();           // Puts the cursor there ready to type
+    } else {
+        inputBox.style.display = "none";
+        inputBox.disabled = true;   // Locks it when not in use
     }
+}
 function addLift() {
         const w = document.getElementById('weight').value, 
               r = document.getElementById('reps').value, 
