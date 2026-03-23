@@ -59,8 +59,7 @@
         <button class="tab-btn" onclick="openTab('cardio')">CARDIO</button>
         <button class="tab-btn" onclick="openTab('history')">📜 HISTORY</button>
     </div>
-
-    <div id="lifts" class="tab-content active">
+<div id="lifts" class="tab-content active">
         <div class="timer-box">
             <span id="timerDisplay">60s</span>
             <button class="timer-btn" onclick="startTimer()">START</button>
@@ -250,19 +249,21 @@
         s.innerHTML = [...standardLifts, ...custom].map(l => `<option value="${l}">${l}</option>`).join('') + `<option value="CUSTOM">-- New Exercise --</option>`;
     }
 
+    // FIXED: This function ensures the input box is definitely usable
     function checkCustom() {
-    const inputBox = document.getElementById('customEventBox');
-    if (document.getElementById('event').value === "CUSTOM") {
-        inputBox.style.display = "block";
-        inputBox.disabled = false;  // This makes sure you can type
-        inputBox.value = "";        // Clear any old text
-        inputBox.focus();           // Puts the cursor there ready to type
-    } else {
-        inputBox.style.display = "none";
-        inputBox.disabled = true;   // Locks it when not in use
+        const inputBox = document.getElementById('customEventBox');
+        if (document.getElementById('event').value === "CUSTOM") {
+            inputBox.style.display = "block";
+            inputBox.disabled = false;  // This makes sure you can type
+            inputBox.value = "";        // Clear any old text
+            inputBox.focus();           // Puts the cursor there ready to type
+        } else {
+            inputBox.style.display = "none";
+            inputBox.disabled = true;   // Locks it when not in use
+        }
     }
-}
-function addLift() {
+    
+    function addLift() {
         const w = document.getElementById('weight').value, 
               r = document.getElementById('reps').value, 
               s = document.getElementById('sets').value, 
@@ -307,8 +308,7 @@ function addLift() {
         document.getElementById('reps').value = ""; 
         document.getElementById('sets').value = "";
     }
-
-    function render() {
+function render() {
         const lifts = JSON.parse(localStorage.getItem('myLifts')) || [];
         document.getElementById('liftList').innerHTML = lifts.map(l => `
             <li>
@@ -357,7 +357,7 @@ function addLift() {
         document.getElementById('cardioList').innerHTML = d.map(c => `
             <li>
                 <button class="del-btn" onclick="deleteItem('cardio', ${c.id})">×</button>
-                <strong>${c.event}:</strong> ${c.stats}
+                <strong>${c.event}</strong>: ${c.stats}
             </li>
         `).join('');
     }
@@ -404,88 +404,88 @@ function addLift() {
         renderHistory(); // Update history view
     }
 
-// UPDATED: Show list of dates
-function renderHistory() {
-    const history = JSON.parse(localStorage.getItem('workoutHistory')) || {};
-    const dates = Object.keys(history).reverse(); // Show newest first
+    // UPDATED: Show list of dates
+    function renderHistory() {
+        const history = JSON.parse(localStorage.getItem('workoutHistory')) || {};
+        const dates = Object.keys(history).reverse(); // Show newest first
 
-    if (dates.length === 0) {
-        document.getElementById('historyContainer').innerHTML = "<p style='text-align:center; color:#888;'>No history yet. Finish a workout to see it here.</p>";
-        return;
-    }
-
-    document.getElementById('historyContainer').innerHTML = dates.map(date => `
-        <div class="day-card" onclick="toggleHistoryDetail('${date}')" style="cursor:pointer;">
-            <div class="day-title">${date} <span style="color:#888;">▶️</span></div>
-        </div>
-    `).join('');
-    
-    // Initialize detail area as empty
-    document.getElementById('historyDetail').innerHTML = "";
-}
-
-// NEW: Toggle function to open or close
-let currentOpenDate = null; // Keep track of what is open
-
-function toggleHistoryDetail(date) {
-    const detailDiv = document.getElementById('historyDetail');
-    
-    if (currentOpenDate === date) {
-        // If clicking the same date, close it
-        detailDiv.innerHTML = "";
-        currentOpenDate = null;
-    } else {
-        // If clicking a new date, open it
-        showHistoryDetail(date);
-        currentOpenDate = date;
-    }
-}
-
-// UPDATED: Show details including Coach Advice, grouped by exercise
-function showHistoryDetail(date) {
-    const history = JSON.parse(localStorage.getItem('workoutHistory')) || {};
-    const entry = history[date];
-
-    if (!entry) return;
-
-    // Group lifts by exercise name
-    const groupedLifts = {};
-    entry.lifts.forEach(l => {
-        if (!groupedLifts[l.event]) {
-            groupedLifts[l.event] = [];
+        if (dates.length === 0) {
+            document.getElementById('historyContainer').innerHTML = "<p style='text-align:center; color:#888;'>No history yet. Finish a workout to see it here.</p>";
+            return;
         }
-        groupedLifts[l.event].push(l);
-    });
 
-    // Generate HTML for grouped lifts
-    let liftsHtml = Object.keys(groupedLifts).map(eventName => {
-        const sets = groupedLifts[eventName];
-        const setsHtml = sets.map((l, index) => `
-            <li style="margin-left: 15px; border-left-width: 3px;">
-                <strong>Set ${index + 1}:</strong> ${l.s}x${l.r} @ ${l.w}KG<br>
-                <span class="coach-msg ${l.adviceClass}">${l.advice}</span>
-            </li>
+        document.getElementById('historyContainer').innerHTML = dates.map(date => `
+            <div class="day-card" onclick="toggleHistoryDetail('${date}')" style="cursor:pointer;">
+                <div class="day-title">${date} <span style="color:#888;">▶️</span></div>
+            </div>
+        `).join('');
+        
+        // Initialize detail area as empty
+        document.getElementById('historyDetail').innerHTML = "";
+    }
+
+    // NEW: Toggle function to open or close
+    let currentOpenDate = null; // Keep track of what is open
+
+    function toggleHistoryDetail(date) {
+        const detailDiv = document.getElementById('historyDetail');
+        
+        if (currentOpenDate === date) {
+            // If clicking the same date, close it
+            detailDiv.innerHTML = "";
+            currentOpenDate = null;
+        } else {
+            // If clicking a new date, open it
+            showHistoryDetail(date);
+            currentOpenDate = date;
+        }
+    }
+
+    // UPDATED: Show details including Coach Advice, grouped by exercise
+    function showHistoryDetail(date) {
+        const history = JSON.parse(localStorage.getItem('workoutHistory')) || {};
+        const entry = history[date];
+
+        if (!entry) return;
+
+        // Group lifts by exercise name
+        const groupedLifts = {};
+        entry.lifts.forEach(l => {
+            if (!groupedLifts[l.event]) {
+                groupedLifts[l.event] = [];
+            }
+            groupedLifts[l.event].push(l);
+        });
+
+        // Generate HTML for grouped lifts
+        let liftsHtml = Object.keys(groupedLifts).map(eventName => {
+            const sets = groupedLifts[eventName];
+            const setsHtml = sets.map((l, index) => `
+                <li style="margin-left: 15px; border-left-width: 3px;">
+                    <strong>Set ${index + 1}:</strong> ${l.s}x${l.r} @ ${l.w}KG<br>
+                    <span class="coach-msg ${l.adviceClass}">${l.advice}</span>
+                </li>
+            `).join('');
+
+            return `
+                <div style="margin: 10px 0; padding: 10px; background: #222; border-radius: 5px; border-left: 5px solid #ff0000;">
+                    <h4 style="margin: 0 0 10px 0; color: #ff0000;">${eventName}</h4>
+                    <ul style="padding: 0; list-style: none;">${setsHtml}</ul>
+                </div>
+            `;
+        }).join('');
+
+        // Generate HTML for cardio
+        let cardioHtml = entry.cardio.map(c => `
+            <li><strong>${c.event}</strong>: ${c.stats}</li>
         `).join('');
 
-        return `
-            <div style="margin: 10px 0; padding: 10px; background: #222; border-radius: 5px; border-left: 5px solid #ff0000;">
-                <h4 style="margin: 0 0 10px 0; color: #ff0000;">${eventName}</h4>
-                <ul style="padding: 0; list-style: none;">${setsHtml}</ul>
-            </div>
+        document.getElementById('historyDetail').innerHTML = `
+            <h3 style="color:#ff0000; text-align:center;">${date}</h3>
+            ${liftsHtml ? `<div>${liftsHtml}</div>` : ''}
+            ${cardioHtml ? `<h4 style="margin:10px 0 5px 0;">Cardio:</h4><ul style="padding:0;">${cardioHtml}</ul>` : ''}
         `;
-    }).join('');
-
-    // Generate HTML for cardio
-    let cardioHtml = entry.cardio.map(c => `
-        <li><strong>${c.event}</strong>: ${c.stats}</li>
-    `).join('');
-
-    document.getElementById('historyDetail').innerHTML = `
-        <h3 style="color:#ff0000; text-align:center;">${date}</h3>
-        ${liftsHtml ? `<div>${liftsHtml}</div>` : ''}
-        ${cardioHtml ? `<h4 style="margin:10px 0 5px 0;">Cardio:</h4><ul style="padding:0;">${cardioHtml}</ul>` : ''}
-    `;
-}
+    }
 </script>
 </body>
-</html>    
+</html>        
